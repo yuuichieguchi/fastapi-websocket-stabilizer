@@ -1,0 +1,83 @@
+[build-system]
+requires = ["setuptools>=68.0", "wheel"]
+build-backend = "setuptools.build_meta"
+
+[project]
+name = "fastapi-websocket-stabilizer"
+version = "0.1.0"
+description = "A production-ready WebSocket stabilization layer for FastAPI applications"
+readme = "README.md"
+requires-python = ">=3.10"
+license = {text = "MIT"}
+authors = [
+    {name = "FastAPI WebSocket Stabilizer Contributors"}
+]
+keywords = [
+    "fastapi",
+    "websocket",
+    "connection-management",
+    "heartbeat",
+    "graceful-shutdown",
+]
+classifiers = [
+    "Development Status :: 4 - Beta",
+    "Environment :: Web Environment",
+    "Intended Audience :: Developers",
+    "License :: OSI Approved :: MIT License",
+    "Operating System :: OS Independent",
+    "Programming Language :: Python",
+    "Programming Language :: Python :: 3",
+    "Programming Language :: Python :: 3.10",
+    "Programming Language :: Python :: 3.11",
+    "Programming Language :: Python :: 3.12",
+    "Topic :: Internet :: WWW/HTTP",
+    "Topic :: Software Development :: Libraries :: Python Modules",
+]
+
+dependencies = [
+    "fastapi>=0.95.0",
+]
+
+[project.optional-dependencies]
+dev = [
+    "pytest>=7.0",
+    "pytest-asyncio>=0.21.0",
+    "pytest-cov>=4.0",
+    "black>=23.0",
+    "ruff>=0.1.0",
+    "mypy>=1.0",
+    "uvicorn>=0.20.0",
+]
+
+[project.urls]
+Homepage = "https://github.com/fastapi-websocket-stabilizer/fastapi-websocket-stabilizer"
+Repository = "https://github.com/fastapi-websocket-stabilizer/fastapi-websocket-stabilizer"
+Documentation = "https://github.com/fastapi-websocket-stabilizer/fastapi-websocket-stabilizer#readme"
+Issues = "https://github.com/fastapi-websocket-stabilizer/fastapi-websocket-stabilizer/issues"
+
+[tool.setuptools]
+packages = ["fastapi_websocket_stabilizer"]
+package-dir = {"" = "src"}
+
+[tool.black]
+line-length = 100
+target-version = ["py310", "py311", "py312"]
+
+[tool.ruff]
+line-length = 100
+target-version = "py310"
+select = ["E", "F", "W", "I"]
+
+[tool.mypy]
+python_version = "3.10"
+warn_return_any = true
+warn_unused_configs = true
+disallow_untyped_defs = true
+disallow_untyped_calls = true
+
+[tool.pytest.ini_options]
+asyncio_mode = "auto"
+testpaths = ["tests"]
+python_files = ["test_*.py"]
+python_classes = ["Test*"]
+python_functions = ["test_*"]
