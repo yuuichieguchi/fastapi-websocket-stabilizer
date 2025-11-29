@@ -561,6 +561,9 @@ Inspired by production WebSocket patterns in large-scale FastAPI deployments, wi
 
 ## Version History
 
+### 0.1.1
+- Fix GitHub URLs and setuptools compatibility
+
 ### 0.1.0 (Initial Release)
 - Core connection management
 - Heartbeat/ping-pong mechanism
