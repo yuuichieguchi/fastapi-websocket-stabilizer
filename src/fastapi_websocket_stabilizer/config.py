@@ -13,6 +13,14 @@ class CompressionMode(str, Enum):
     NONE = "none"
 
 
+class MemoryEvictionPolicy(str, Enum):
+    """Memory eviction policies for connection management."""
+
+    LRU = "lru"
+    FIFO = "fifo"
+    OLDEST = "oldest"
+
+
 @dataclass
 class WebSocketConfig:
     """Configuration for WebSocket connection manager.
@@ -50,6 +58,19 @@ class WebSocketConfig:
     log_level: str = "INFO"
     enable_metrics: bool = False
 
+    # Sharding configuration
+    num_shards: int = 16
+
+    # Concurrency limits
+    max_concurrent_cleanup: int = 100
+    max_concurrent_broadcast: int = 1000
+
+    # Memory management
+    memory_check_interval: float = 60.0
+    memory_eviction_policy: MemoryEvictionPolicy = MemoryEvictionPolicy.LRU
+    max_memory_per_connection: Optional[int] = None
+    max_total_memory: Optional[int] = None
+
     def __post_init__(self) -> None:
         """Validate configuration after initialization."""
         if self.heartbeat_interval <= 0:
@@ -64,6 +85,42 @@ class WebSocketConfig:
             raise ValueError("reconnect_token_ttl must be positive")
         if self.log_level not in ("DEBUG", "INFO", "WARNING", "ERROR", "CRITICAL"):
             raise ValueError("log_level must be a valid logging level")
+
+        # Sharding validation
+        if self.num_shards <= 0:
+            raise ValueError("num_shards must be positive")
+
+        # Concurrency limits validation
+        if self.max_concurrent_cleanup <= 0:
+            raise ValueError("max_concurrent_cleanup must be positive")
+        if self.max_concurrent_broadcast <= 0:
+            raise ValueError("max_concurrent_broadcast must be positive")
+
+        # Memory management validation
+        if self.memory_check_interval <= 0:
+            raise ValueError("memory_check_interval must be positive")
+
+        # Handle string-to-enum conversion for memory_eviction_policy
+        if isinstance(self.memory_eviction_policy, str):
+            try:
+                object.__setattr__(
+                    self,
+                    "memory_eviction_policy",
+                    MemoryEvictionPolicy(self.memory_eviction_policy.lower()),
+                )
+            except ValueError:
+                raise ValueError(
+                    f"memory_eviction_policy must be one of: {[e.value for e in MemoryEvictionPolicy]}"
+                )
+        elif not isinstance(self.memory_eviction_policy, MemoryEvictionPolicy):
+            raise ValueError(
+                f"memory_eviction_policy must be one of: {[e.value for e in MemoryEvictionPolicy]}"
+            )
+
+        if self.max_memory_per_connection is not None and self.max_memory_per_connection <= 0:
+            raise ValueError("max_memory_per_connection must be positive")
+        if self.max_total_memory is not None and self.max_total_memory <= 0:
+            raise ValueError("max_total_memory must be positive")
 
 
 @dataclass

@@ -47,3 +47,9 @@ class ShutdownError(WebSocketStabilizerError):
     """Raised when graceful shutdown encounters errors."""
 
     pass
+
+
+class MemoryLimitExceededError(WebSocketStabilizerError):
+    """Raised when memory limit is exceeded for a connection or total."""
+
+    pass

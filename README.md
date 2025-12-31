@@ -26,6 +26,9 @@ This library abstracts away these concerns with a simple, production-tested API.
 - ✅ **Connection Limits**: Configurable max connections with automatic enforcement
 - ✅ **Type Safety**: Full type hints for all public APIs (Python 3.10+)
 - ✅ **Zero Dependencies**: Only depends on FastAPI (which provides WebSocket support)
+- ✅ **Sharded Connection Pools**: Reduce lock contention under high load with configurable sharding
+- ✅ **Memory Management**: Track and limit memory usage per connection with eviction policies
+- ✅ **Concurrency Control**: Semaphore-based limiting for cleanup and broadcast operations
 
 ## Installation
 
@@ -155,7 +158,25 @@ async def get_stats():
     return {
         "active_connections": ws_manager.get_connection_count(),
         "client_ids": ws_manager.get_active_connections(),
+        "memory": ws_manager.get_memory_usage(),  # v1.1.0+
     }
+```
+
+### Pattern 5: Per-Connection User Data (v1.1.0+)
+
+```python
+@app.websocket("/ws/{client_id}")
+async def websocket_endpoint(websocket: WebSocket, client_id: str):
+    await websocket.accept()
+    await ws_manager.connect(client_id, websocket)
+
+    # Store user state per connection
+    await ws_manager.set_user_data(client_id, "username", "Alice")
+    await ws_manager.set_user_data(client_id, "room", "general")
+
+    # Retrieve later
+    username = await ws_manager.get_user_data(client_id, "username")
+    print(f"{username} joined")  # "Alice joined"
 ```
 
 ## Configuration Reference
@@ -188,6 +209,19 @@ config = WebSocketConfig(
     # Logging
     log_level="INFO",             # DEBUG, INFO, WARNING, ERROR, CRITICAL
     enable_metrics=False,         # Collect metrics (experimental)
+
+    # Sharding (reduces lock contention under high load)
+    num_shards=16,                # Number of connection pool shards
+
+    # Concurrency control (prevents cleanup/broadcast storms)
+    max_concurrent_cleanup=100,   # Max concurrent connection closures
+    max_concurrent_broadcast=1000, # Max concurrent broadcast sends
+
+    # Memory management
+    max_memory_per_connection=None,  # Max bytes per connection (None = unlimited)
+    max_total_memory=None,           # Max total bytes (None = unlimited)
+    memory_eviction_policy="lru",    # "lru", "fifo", or "oldest"
+    memory_check_interval=60.0,      # Seconds between memory checks
 )
 ```
 
@@ -216,6 +250,22 @@ WebSocketConfig(
 WebSocketConfig(
     heartbeat_interval=20.0,      # Serverless platforms have stricter timeouts
     max_connections=500,          # Limited resource per instance
+)
+```
+
+#### High-load production (10k+ connections)
+```python
+from fastapi_websocket_stabilizer import WebSocketConfig, MemoryEvictionPolicy
+
+WebSocketConfig(
+    heartbeat_interval=30.0,
+    max_connections=50000,
+    num_shards=32,                      # More shards for reduced lock contention
+    max_concurrent_cleanup=50,          # Prevent cleanup storms
+    max_concurrent_broadcast=500,       # Control broadcast load
+    max_memory_per_connection=1024*1024,  # 1MB per connection
+    max_total_memory=1024*1024*1024,      # 1GB total
+    memory_eviction_policy=MemoryEvictionPolicy.LRU,  # Evict least recently used
 )
 ```
 
@@ -462,6 +512,17 @@ class WebSocketConnectionManager:
 
     async def graceful_shutdown(self, timeout: float = 30.0) -> ShutdownReport:
         """Shut down manager and close all connections."""
+
+    # Memory management methods (v1.1.0+)
+    def get_memory_usage(self) -> dict[str, int | float]:
+        """Get memory usage statistics.
+        Returns: {total_memory, connection_count, per_connection_average}"""
+
+    async def set_user_data(self, client_id: str, key: str, value: Any) -> None:
+        """Set user data for a connection (with memory limit checking)."""
+
+    async def get_user_data(self, client_id: str, key: str) -> Any | None:
+        """Get user data for a connection."""
 ```
 
 ### Exceptions
@@ -476,10 +537,17 @@ from fastapi_websocket_stabilizer import (
     InvalidTokenError,                  # Token invalid/tampered
     BroadcastFailedError,               # Broadcast failed
     ShutdownError,                      # Shutdown error
+    MemoryLimitExceededError,           # Memory limit exceeded (v1.1.0+)
 )
 ```
 
 ## Roadmap
+
+### Completed (v1.1.0)
+
+- [x] Sharded connection pools for high-load scenarios
+- [x] Memory management with eviction policies
+- [x] Concurrency control for cleanup/broadcast storms
 
 ### Planned Features
 
@@ -560,6 +628,17 @@ Inspired by production WebSocket patterns in large-scale FastAPI deployments, wi
 - Community feedback on WebSocket reliability
 
 ## Version History
+
+### 1.1.0
+- **Sharded Connection Pools**: Reduce lock contention with configurable `num_shards`
+- **Concurrency Control**: Semaphore-based `max_concurrent_cleanup` and `max_concurrent_broadcast`
+- **Memory Management**: Per-connection and total memory limits with eviction policies (LRU, FIFO, OLDEST)
+- New methods: `get_memory_usage()`, `set_user_data()`, `get_user_data()`
+- New exception: `MemoryLimitExceededError`
+- Bug fixes: `hmac.hexdigest()` for Python 3.14 compatibility, reconnection within limits
+
+### 1.0.0
+- Stable release
 
 ### 0.1.1
 - Fix GitHub URLs and setuptools compatibility

@@ -1,12 +1,19 @@
 """FastAPI WebSocket Stabilizer: Production-ready WebSocket handling for FastAPI applications."""
 
-from .config import BroadcastResult, CompressionMode, ShutdownReport, WebSocketConfig
+from .config import (
+    BroadcastResult,
+    CompressionMode,
+    MemoryEvictionPolicy,
+    ShutdownReport,
+    WebSocketConfig,
+)
 from .exceptions import (
     BroadcastFailedError,
     ConnectionLimitExceededError,
     ConnectionNotFoundError,
     ConnectionTimeoutError,
     InvalidTokenError,
+    MemoryLimitExceededError,
     ShutdownError,
     TokenExpiredError,
     WebSocketStabilizerError,
@@ -14,7 +21,7 @@ from .exceptions import (
 from .logging_utils import StructuredLogger, configure_logging, get_logger
 from .manager import WebSocketConnectionManager
 
-__version__ = "0.1.0"
+__version__ = "1.1.0"
 
 __all__ = [
     # Main class
@@ -24,6 +31,7 @@ __all__ = [
     "BroadcastResult",
     "ShutdownReport",
     "CompressionMode",
+    "MemoryEvictionPolicy",
     # Exceptions
     "WebSocketStabilizerError",
     "ConnectionNotFoundError",
@@ -33,6 +41,7 @@ __all__ = [
     "InvalidTokenError",
     "BroadcastFailedError",
     "ShutdownError",
+    "MemoryLimitExceededError",
     # Logging
     "get_logger",
     "configure_logging",

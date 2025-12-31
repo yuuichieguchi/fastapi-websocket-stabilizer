@@ -1,6 +1,7 @@
 """Internal data models for WebSocket connections and tokens."""
 
 import asyncio
+import sys
 import time
 from dataclasses import dataclass, field
 from typing import Any, Optional
@@ -44,6 +45,32 @@ class ConnectionMetadata:
         """Update last activity timestamp to current time."""
         self.last_activity = time.time()
 
+    def estimate_memory_size(self) -> int:
+        """Estimate the memory size of this connection metadata in bytes.
+
+        Uses sys.getsizeof() to estimate memory usage of key attributes.
+
+        Returns:
+            Estimated memory size in bytes
+        """
+        size = 0
+        # Estimate client_id size
+        size += sys.getsizeof(self.client_id)
+        # Estimate timestamps (floats)
+        size += sys.getsizeof(self.created_at)
+        size += sys.getsizeof(self.last_activity)
+        # Estimate metadata dict
+        size += sys.getsizeof(self.metadata)
+        for key, value in self.metadata.items():
+            size += sys.getsizeof(key)
+            size += sys.getsizeof(value)
+        # Estimate user_data dict
+        size += sys.getsizeof(self.user_data)
+        for key, value in self.user_data.items():
+            size += sys.getsizeof(key)
+            size += sys.getsizeof(value)
+        return size
+
 
 @dataclass
 class ReconnectToken:
@@ -78,3 +105,16 @@ class ReconnectToken:
             Seconds until expiration (negative if already expired)
         """
         return self.expires_at - time.time()
+
+
+@dataclass
+class ConnectionShard:
+    """A shard for connection management to reduce lock contention.
+
+    Attributes:
+        connections: Dictionary mapping client_id to ConnectionMetadata
+        lock: Asyncio lock for thread-safe access to this shard
+    """
+
+    connections: dict[str, ConnectionMetadata] = field(default_factory=dict)
+    lock: asyncio.Lock = field(default_factory=asyncio.Lock)
